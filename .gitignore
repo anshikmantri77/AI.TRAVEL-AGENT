@@ -1,0 +1,33 @@
+# Environments
+.env
+.venv
+venv/
+ENV/
+env/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+
+# IDEs / Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Build output
+frontend/dist/
+*.egg-info/
+
+# Redis dump
+dump.rdb
