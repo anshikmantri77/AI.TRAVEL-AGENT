@@ -158,18 +158,6 @@ The API is also available at `http://localhost:8000` with interactive docs at `/
 
 ---
 
-## Live Demo
-
-Coming soon at [https://tripmind.up.railway.app](https://tripmind.up.railway.app)
-
----
-
-## Author
-
-**Your Name** — [GitHub](https://github.com/your-username) · [LinkedIn](https://linkedin.com/in/your-profile)
-
----
-
 ## License
 
 MIT — see [LICENSE](LICENSE) for details.
