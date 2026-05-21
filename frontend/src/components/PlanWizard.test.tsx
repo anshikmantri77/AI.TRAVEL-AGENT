@@ -41,7 +41,7 @@ async function goToStep2() {
 async function fillStep2AndGo() {
   await goToStep2();
   await userEvent.type(screen.getByPlaceholderText("e.g. Mumbai"), "Delhi");
-  await userEvent.type(screen.getByPlaceholderText("e.g. Paris, France"), "Tokyo");
+  await userEvent.type(screen.getByPlaceholderText("e.g. Jaipur"), "Tokyo");
   const dateInputs = document.querySelectorAll<HTMLInputElement>('input[type="date"]');
   fireEvent.change(dateInputs[0], { target: { value: "2026-10-01" } });
   fireEvent.change(dateInputs[1], { target: { value: "2026-10-05" } });
@@ -57,7 +57,7 @@ describe("PlanWizard", () => {
 
   it("renders step 1 (Trip Purpose) with 6 purpose cards", () => {
     renderWithProviders();
-    expect(screen.getByText("Trip Purpose")).toBeInTheDocument();
+    expect(screen.getAllByText("Purpose").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Adventure")).toBeInTheDocument();
     expect(screen.getByText("Food & Culinary")).toBeInTheDocument();
     expect(screen.getByText("Culture & History")).toBeInTheDocument();
@@ -78,10 +78,10 @@ describe("PlanWizard", () => {
     renderWithProviders();
     const adventureBtn = screen.getByText("Adventure").closest("button")!;
     await userEvent.click(adventureBtn);
-    expect(adventureBtn.className).toContain("border-blue-500");
+    expect(adventureBtn.className).toContain("ring-1");
 
     await userEvent.click(adventureBtn);
-    expect(adventureBtn.className).not.toContain("border-blue-500");
+    expect(adventureBtn.className).not.toContain("ring-1");
   });
 
   it("purpose is mandatory — Next shows error without selection", async () => {
@@ -107,14 +107,14 @@ describe("PlanWizard", () => {
     await goToStep2();
 
     await userEvent.type(screen.getByPlaceholderText("e.g. Mumbai"), "Delhi");
-    await userEvent.type(screen.getByPlaceholderText("e.g. Paris, France"), "Tokyo");
+    await userEvent.type(screen.getByPlaceholderText("e.g. Jaipur"), "Tokyo");
 
     const dateInputs = document.querySelectorAll<HTMLInputElement>('input[type="date"]');
     fireEvent.change(dateInputs[0], { target: { value: "2026-10-01" } });
     fireEvent.change(dateInputs[1], { target: { value: "2026-10-05" } });
 
     await userEvent.click(screen.getByRole("button", { name: /next/i }));
-    expect(screen.getByText("Budget Min (₹)")).toBeInTheDocument();
+    expect(screen.getByText("Budget (Min) ₹")).toBeInTheDocument();
   });
 
   it("shows Back button on step 2", async () => {
@@ -175,6 +175,6 @@ describe("PlanWizard", () => {
 
     const backpackerBtn = screen.getByText("Backpacker").closest("button")!;
     await userEvent.click(backpackerBtn);
-    expect(backpackerBtn.className).toContain("border-blue-500");
+    expect(backpackerBtn.className).toContain("ring-1");
   });
 });

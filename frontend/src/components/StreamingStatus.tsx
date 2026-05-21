@@ -1,29 +1,17 @@
 import { useEffect, useState } from "react";
 import { subscribeToStream, StreamEvent } from "../lib/api";
 import { format } from "date-fns";
-import { CheckCircle2, Circle, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 
-
-
-interface StageState {
-  completedAt: string | null;
-  active: boolean;
-}
+interface StageState { completedAt: string | null; active: boolean }
 
 export default function StreamingStatus({ sessionId }: { sessionId: string }) {
   const [stages, setStages] = useState<Record<string, StageState>>({});
   useEffect(() => {
     if (!sessionId) return;
-    const cleanup = subscribeToStream(sessionId, (event: StreamEvent) => {
-      setStages((prev) => ({
-        ...prev,
-        [event.data.stage]: {
-          completedAt: event.data.timestamp,
-          active: true,
-        },
-      }));
+    return subscribeToStream(sessionId, (event: StreamEvent) => {
+      setStages((prev) => ({ ...prev, [event.data.stage]: { completedAt: event.data.timestamp, active: true } }));
     });
-    return cleanup;
   }, [sessionId]);
 
   const steps = [
@@ -34,51 +22,32 @@ export default function StreamingStatus({ sessionId }: { sessionId: string }) {
     { key: "done", label: "Finalizing plan" },
   ];
 
-  const currentIdx = steps.findIndex((s) => stages[s.key]?.active);
-  const activeIdx = currentIdx >= 0 ? currentIdx : -1;
+  const activeIdx = steps.findIndex((s) => stages[s.key]?.active);
   const isWaiting = activeIdx < 0;
 
   return (
     <div className="space-y-3">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-        Progress
-      </h3>
+      <p className="section-label text-xs">Progress</p>
       <div className="space-y-0">
         {steps.map((step, i) => {
           const completed = !!stages[step.key]?.completedAt;
           const active = i === activeIdx && !completed;
-      return (
-            <div
-              key={step.key}
-              className={`flex items-start gap-3 border-l-2 py-3 pl-4 transition-all duration-300 ${
-                active
-                  ? "border-blue-500"
-                  : completed
-                    ? "border-green-500"
-                    : "border-gray-700"
-              }`}
-            >
+          const color = active ? "var(--color-accent)" : completed ? "var(--color-status-go)" : "var(--color-rule)";
+          return (
+            <div key={step.key} className="flex items-start gap-3 py-3 pl-4 transition-all" style={{ borderLeft: `2px solid ${color}` }}>
               {completed ? (
-                <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-green-400" />
+                <CheckCircle2 size={17} className="mt-0.5 shrink-0" style={{ color: "var(--color-status-go)" }} />
               ) : active ? (
-                <Loader2 size={18} className="mt-0.5 shrink-0 animate-spin text-blue-400" />
+                <Loader2 size={17} className="mt-0.5 shrink-0 animate-spin text-accent" />
               ) : (
-                <Circle size={18} className="mt-0.5 shrink-0 text-gray-600" />
+                <div className="mt-0.5 shrink-0 h-[17px] w-[17px] rounded-full border-2" style={{ borderColor: "var(--color-rule)" }} />
               )}
               <div className="min-w-0">
-                <p
-                  className={`text-sm ${
-                    completed
-                      ? "text-green-300"
-                      : active
-                        ? "text-blue-200"
-                        : "text-gray-500"
-                  }`}
-                >
+                <p className="text-sm" style={{ color: completed ? "var(--color-status-go)" : active ? "var(--color-ink)" : "var(--color-ink-mute)" }}>
                   {step.label}
                 </p>
                 {completed && stages[step.key]?.completedAt && i < 3 && (
-                  <p className="text-xs text-gray-500">
+                  <p className="font-mono text-[11px] text-ink-mute">
                     {format(new Date(stages[step.key]!.completedAt!), "HH:mm:ss")}
                   </p>
                 )}
@@ -88,8 +57,8 @@ export default function StreamingStatus({ sessionId }: { sessionId: string }) {
         })}
       </div>
       {isWaiting && (
-        <p className="flex items-center gap-2 text-xs text-gray-500">
-          <Loader2 size={12} className="animate-spin" />
+        <p className="flex items-center gap-2 font-mono text-[11px] text-ink-mute">
+          <Loader2 size={12} className="animate-spin text-accent" />
           Waiting for planner...
         </p>
       )}

@@ -11,6 +11,8 @@ from langgraph.types import Command
 
 from src.auth.dependencies import get_optional_user
 from src.api.streaming import streaming_manager
+from src.config import get_settings
+from src.limiter import limiter, get_rate_limit_string
 from src.observability.metrics import metrics_enabled, record_plan_complete, record_plan_start, plan_requests_total, plan_completions_total, plan_duration_seconds, active_sessions
 from src.tools.export import generate_pdf, generate_ical
 
@@ -25,6 +27,8 @@ from src.api.models import (
     ReviewResponse,
     TravelRequestBody,
 )
+
+_RATE_LIMIT_STRING = get_rate_limit_string()
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +72,7 @@ async def health_check():
     responses={422: {"model": ErrorResponse}},
     tags=["planning"],
 )
+@limiter.limit(_RATE_LIMIT_STRING)
 async def create_plan(body: TravelRequestBody, request: Request, user: dict | None = Depends(get_optional_user)):
     """Submit a new travel planning request.
 

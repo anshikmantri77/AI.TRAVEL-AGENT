@@ -186,6 +186,7 @@ async def run_planner_agent(
 
     llm = _get_llm()
     tool_map = {t.name: t for t in PLANNER_TOOLS}
+    captured_pricing: dict[str, Any] = {}
 
     messages: list[Any] = [
         SystemMessage(content=PLANNER_SYSTEM_PROMPT),
@@ -205,15 +206,26 @@ async def run_planner_agent(
                         result = tool_fn.invoke(tc["args"])
                     except Exception as exc:
                         result = json.dumps({"error": str(exc)})
+                    if tc["name"] in ("get_flight_prices", "get_hotel_prices"):
+                        try:
+                            parsed = json.loads(result) if isinstance(result, str) else result
+                            key = "flights" if tc["name"] == "get_flight_prices" else "hotels"
+                            captured_pricing[key] = parsed if isinstance(parsed, list) else [parsed]
+                        except (json.JSONDecodeError, TypeError):
+                            pass
                 else:
                     result = json.dumps({"error": f"Unknown tool: {tc['name']}"})
                 messages.append(ToolMessage(content=result, tool_call_id=tc["id"]))
             continue
 
         text = response.content if isinstance(response.content, str) else str(response.content)
-        return _parse_itinerary_output(text)
+        itinerary = _parse_itinerary_output(text)
+        itinerary["pricing_data"] = captured_pricing
+        return itinerary
 
-    return _default_itinerary(destination, num_days)
+    default = _default_itinerary(destination, num_days)
+    default["pricing_data"] = captured_pricing
+    return default
 
 
 def _parse_itinerary_output(text: str) -> dict[str, Any]:

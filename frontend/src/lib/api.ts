@@ -237,6 +237,78 @@ export function flightSearchUrl(origin: string, dest: string, date?: string): st
   return url;
 }
 
+const IATA_CODES: Record<string, string> = {
+  mumbai: "BOM", bombay: "BOM",
+  delhi: "DEL", newdelhi: "DEL",
+  bangalore: "BLR", bengaluru: "BLR",
+  chennai: "MAA", madras: "MAA",
+  kolkata: "CCU", calcutta: "CCU",
+  hyderabad: "HYD",
+  pune: "PNQ",
+  ahmedabad: "AMD",
+  jaipur: "JAI",
+  goa: "GOI",
+  agra: "AGR",
+  varanasi: "VNS", banaras: "VNS", kashi: "VNS",
+  udaipur: "UDR",
+  kochi: "COK", cochin: "COK",
+  coimbatore: "CJB",
+  lucknow: "LKO",
+  guwahati: "GAU",
+  amritsar: "ATQ",
+  indore: "IDR",
+  bhubaneswar: "BBI",
+  srinagar: "SXR",
+  "mangalore": "IXE", mangaluru: "IXE",
+  trivandrum: "TRV", thiruvananthapuram: "TRV",
+  vizag: "VTZ", visakhapatnam: "VTZ",
+  nagpur: "NAG",
+  chandigarh: "IXC",
+  paris: "CDG",
+  london: "LHR",
+  dubai: "DXB",
+  singapore: "SIN",
+  bangkok: "BKK",
+  tokyo: "NRT",
+  "newyork": "JFK", "new york": "JFK",
+  "losangeles": "LAX", "los angeles": "LAX",
+  sanfrancisco: "SFO", "san francisco": "SFO",
+  chicago: "ORD",
+  toronto: "YYZ",
+  sydney: "SYD",
+  melbourne: "MEL",
+};
+
+function toIata(city: string): string | null {
+  const key = city.toLowerCase().trim().replace(/\s+/g, "");
+  return IATA_CODES[key] || null;
+}
+
+function toSkyscannerDate(dateStr: string): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  const yy = d.getFullYear().toString().slice(-2);
+  const mm = (d.getMonth() + 1).toString().padStart(2, "0");
+  const dd = d.getDate().toString().padStart(2, "0");
+  return `${yy}${mm}${dd}`;
+}
+
+export function skyScannerUrl(
+  origin: string,
+  dest: string,
+  departDate?: string,
+  returnDate?: string,
+  adults?: number,
+): string {
+  const fromCode = toIata(origin) || origin.slice(0, 3).toLowerCase();
+  const toCode = toIata(dest) || dest.slice(0, 3).toLowerCase();
+  const dep = departDate ? toSkyscannerDate(departDate) : "";
+  const ret = returnDate ? toSkyscannerDate(returnDate) : "";
+  const datePath = dep && ret ? `${dep}/${ret}` : dep || "";
+  const adultsParam = adults && adults > 0 ? `&adultsv2=${adults}` : "";
+  return `https://www.skyscanner.co.in/transport/flights/${fromCode}/${toCode}/${datePath}/?cabinclass=economy&rtn=1${adultsParam}&ref=home&preferdirects=false`;
+}
+
 export function trainSearchUrl(origin: string, dest: string): string {
   const from = encodeURIComponent(origin);
   const to = encodeURIComponent(dest);

@@ -48,6 +48,12 @@ class ReviewRequestBody(BaseModel):
     feedback: str | None = Field(None, max_length=2000, description="Optional feedback text")
     modifications: dict[str, Any] | None = Field(None, description="Optional modification details")
 
+    @model_validator(mode="after")
+    def _require_feedback_on_reject(self) -> "ReviewRequestBody":
+        if self.action == "reject" and not self.feedback:
+            raise ValueError("feedback is required when rejecting a plan")
+        return self
+
 
 class PlanCreatedResponse(BaseModel):
     """Returned by POST /plan on success."""

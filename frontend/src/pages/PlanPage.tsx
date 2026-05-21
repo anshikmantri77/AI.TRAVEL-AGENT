@@ -1,19 +1,22 @@
-import { Plane } from "lucide-react";
 import PlanWizard from "../components/PlanWizard";
 
 export default function PlanPage() {
   return (
-    <div className="mx-auto min-h-screen max-w-3xl px-4 py-12">
-      <div className="mb-8 text-center">
-        <div className="flex items-center justify-center gap-2 text-2xl font-bold text-blue-400">
-          <Plane size={28} />
-          TripMind
+    <div className="min-h-screen">
+      <div className="shell pt-8 pb-4">
+        <div className="flex items-baseline justify-between border-b border-rule pb-4">
+          <a href="/plan" className="font-display text-2xl font-bold tracking-tight text-ink hover:no-underline">
+            <span className="text-accent">✱ </span>Wayfinder
+          </a>
+          <span className="font-mono text-xs uppercase tracking-[0.18em] text-ink-mute">
+            Plan your journey
+          </span>
         </div>
-        <p className="mt-1 text-sm text-gray-500">
-          AI-powered travel planning
-        </p>
       </div>
-      <PlanWizard />
+
+      <div className="shell py-8">
+        <PlanWizard />
+      </div>
     </div>
   );
 }

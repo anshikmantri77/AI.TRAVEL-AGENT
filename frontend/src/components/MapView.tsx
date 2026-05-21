@@ -5,11 +5,11 @@ import "leaflet/dist/leaflet.css";
 import type { LatLngTuple } from "leaflet";
 import { DayPlan, DraftItinerary } from "../lib/api";
 
-const DAY_COLORS = ["#3b82f6", "#ef4444", "#22c55e", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"];
+const DAY_COLORS = ["var(--color-accent)", "#ef4444", "#22c55e", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"];
 
 function createIcon(color: string): L.DivIcon {
   return L.divIcon({
-    html: `<div style="background:${color};width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></div>`,
+    html: `<div style="background:${color};width:12px;height:12px;border-radius:50%;border:2px solid oklch(8% 0.02 260);box-shadow:0 0 10px ${color}40"></div>`,
     iconSize: [12, 12],
     iconAnchor: [6, 6],
     className: "",
@@ -18,7 +18,7 @@ function createIcon(color: string): L.DivIcon {
 
 function createAccommodationIcon(): L.DivIcon {
   return L.divIcon({
-    html: `<div style="background:#a855f7;width:18px;height:18px;border-radius:3px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:bold">H</div>`,
+    html: `<div style="background:#a855f7;width:18px;height:18px;border-radius:3px;border:2px solid oklch(8% 0.02 260);box-shadow:0 0 10px #a855f740;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:bold">H</div>`,
     iconSize: [18, 18],
     iconAnchor: [9, 9],
     className: "",
@@ -27,26 +27,16 @@ function createAccommodationIcon(): L.DivIcon {
 
 function createOriginIcon(): L.DivIcon {
   return L.divIcon({
-    html: `<div style="background:#22c55e;width:20px;height:20px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:bold">O</div>`,
+    html: `<div style="background:oklch(65% 0.18 145);width:20px;height:20px;border-radius:50%;border:3px solid oklch(8% 0.02 260);box-shadow:0 0 12px oklch(65% 0.18 145 / 0.5);display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:bold">O</div>`,
     iconSize: [20, 20],
     iconAnchor: [10, 10],
     className: "",
   });
 }
 
-interface ActivityPoint {
-  lat: number;
-  lng: number;
-  label: string;
-  day: number;
-  slot: string;
-}
+interface ActivityPoint { lat: number; lng: number; label: string; day: number; slot: string }
 
-interface Props {
-  itinerary: DraftItinerary;
-  origin?: string;
-  className?: string;
-}
+interface Props { itinerary: DraftItinerary; origin?: string; className?: string }
 
 const INDIA_CITIES: Record<string, [number, number]> = {
   mumbai: [19.076, 72.8777],
@@ -77,38 +67,26 @@ export default function MapView({ itinerary, origin, className }: Props) {
 
   const { points, center, originCoords } = useMemo(() => {
     const pts: ActivityPoint[] = [];
-    let sumLat = 0;
-    let sumLng = 0;
-    let count = 0;
+    let sumLat = 0; let sumLng = 0; let count = 0;
 
     for (const day of days) {
       for (const slot of ["morning", "afternoon", "evening"] as const) {
         const s = day[slot];
         if (s && typeof s.lat === "number" && typeof s.lng === "number") {
           pts.push({ lat: s.lat, lng: s.lng, label: s.activity || "", day: day.day, slot });
-          sumLat += s.lat;
-          sumLng += s.lng;
-          count++;
+          sumLat += s.lat; sumLng += s.lng; count++;
         }
       }
       if (day.accommodation?.lat != null && day.accommodation?.lng != null) {
-        pts.push({
-          lat: day.accommodation.lat,
-          lng: day.accommodation.lng,
-          label: day.accommodation.name || "Accommodation",
-          day: day.day,
-          slot: "stay",
-        });
-        sumLat += day.accommodation.lat;
-        sumLng += day.accommodation.lng;
-        count++;
+        pts.push({ lat: day.accommodation.lat, lng: day.accommodation.lng, label: day.accommodation.name || "Accommodation", day: day.day, slot: "stay" });
+        sumLat += day.accommodation.lat; sumLng += day.accommodation.lng; count++;
       }
     }
 
     let oc: [number, number] | null = null;
     if (origin) {
-      const key = origin.toLowerCase().trim();
-      const found = INDIA_CITIES[key] || INDIA_CITIES[key.replace(/[^a-z]/g, "")];
+      const key = origin.toLowerCase().trim().replace(/[^a-z]/g, "");
+      const found = INDIA_CITIES[key];
       if (found) oc = found;
     }
 
@@ -126,27 +104,32 @@ export default function MapView({ itinerary, origin, className }: Props) {
   }, []);
 
   const routePoints: LatLngTuple[] = useMemo(() => {
-    const pts = points
-      .filter((p) => p.lat !== 0 && p.lng !== 0)
-      .map((p) => [p.lat, p.lng] as LatLngTuple);
-    if (originCoords && pts.length > 0) return [originCoords, ...pts];
-    return pts;
+    const raw = points.filter((p) => p.lat !== 0 && p.lng !== 0).map((p) => [p.lat, p.lng] as LatLngTuple);
+    const deduped: LatLngTuple[] = [];
+    const threshold = 0.02;
+    for (const pt of raw) {
+      const isDuplicate = deduped.some(
+        (d) => Math.abs(d[0] - pt[0]) < threshold && Math.abs(d[1] - pt[1]) < threshold,
+      );
+      if (!isDuplicate) deduped.push(pt);
+    }
+    return originCoords && deduped.length > 0 ? [originCoords, ...deduped] : deduped;
   }, [points, originCoords]);
 
   return (
-    <div className={`overflow-hidden rounded-xl border border-gray-700 ${className || ""}`}>
+    <div className={`overflow-hidden rounded-lg border border-rule ${className || ""}`}>
       <MapContainer center={center} zoom={13} className="h-full w-full" zoomControl={false}>
         <TileLayer
           attribution='&copy; <a href="https://carto.com/">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
         {routePoints.length > 1 && (
-          <Polyline positions={routePoints} color="#60a5fa" opacity={0.5} weight={2.5} />
+          <Polyline positions={routePoints} color="#60a5fa" opacity={0.4} weight={2.5} />
         )}
         {originCoords && (
           <Marker position={originCoords} icon={createOriginIcon()}>
             <Popup>
-              <div className="text-sm">
+              <div className="text-sm font-body">
                 <p className="font-semibold">{origin}</p>
                 <p className="text-xs text-gray-500">Departure City</p>
               </div>
@@ -155,19 +138,16 @@ export default function MapView({ itinerary, origin, className }: Props) {
         )}
         {points.map((p, i) => {
           const isAccommodation = p.slot === "stay";
-          const color = isAccommodation ? "#a855f7" : DAY_COLORS[(p.day - 1) % DAY_COLORS.length];
           return (
             <Marker
               key={i}
               position={[p.lat, p.lng]}
-              icon={isAccommodation ? createAccommodationIcon() : createIcon(color)}
+              icon={isAccommodation ? createAccommodationIcon() : createIcon(DAY_COLORS[(p.day - 1) % DAY_COLORS.length])}
             >
               <Popup>
-                <div className="text-sm">
+                <div className="text-sm font-body">
                   <p className="font-semibold">{p.label}</p>
-                  <p className="text-xs text-gray-500">
-                    {isAccommodation ? "Hotel" : `Day ${p.day} · ${p.slot}`}
-                  </p>
+                  <p className="text-xs text-gray-500">{isAccommodation ? "Hotel" : `Day ${p.day} · ${p.slot}`}</p>
                 </div>
               </Popup>
             </Marker>

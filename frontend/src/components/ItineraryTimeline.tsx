@@ -1,38 +1,23 @@
 import { format, parseISO } from "date-fns";
 import {
-  Sun,
-  CloudSun,
-  Moon,
-  Hotel,
-  Wallet,
-  Train,
-  Car,
-  Footprints,
-  Bus,
-  Plane,
-  ExternalLink,
-  Sparkles,
-  Building2,
+  Sun, CloudSun, Moon, Hotel, Wallet, Train, Car, Footprints, Bus, Plane, ExternalLink, Sparkles
 } from "lucide-react";
 import { DraftItinerary, DayPlan, bookingUrl, googleMapsUrl, flightSearchUrl, trainSearchUrl, busSearchUrl } from "../lib/api";
+
+const MODE_ICONS: Record<string, typeof Car> = { cab: Car, taxi: Car, metro: Train, bus: Bus, walk: Footprints };
 
 function costDisplay(cost: number | undefined | null): string {
   if (cost == null) return "";
   return `₹${cost}`;
 }
 
-const TRAVEL_MODE_ICONS: Record<string, typeof Car> = {
-  cab: Car,
-  taxi: Car,
-  metro: Train,
-  bus: Bus,
-  walk: Footprints,
-};
+function ModeIcon({ mode }: { mode: string }) {
+  const Icon = MODE_ICONS[mode.toLowerCase()] || Car;
+  return <Icon size={11} />;
+}
 
 function ActivityCell({
-  icon,
-  label,
-  slot,
+  icon, label, slot,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -40,24 +25,28 @@ function ActivityCell({
 }) {
   if (!slot || !slot.activity) {
     return (
-      <div className="rounded-lg bg-gray-800/30 p-2.5 text-gray-600">
-        <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-500">
+      <div className="rounded-lg bg-paper-3/30 p-2.5">
+        <div className="flex items-center gap-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-ink-mute">
           {icon} {label}
         </div>
-        <p className="mt-1 text-xs italic">—</p>
+        <p className="mt-1 text-xs italic text-ink-mute">—</p>
       </div>
     );
   }
-  const gmapsHref = slot.google_maps_link || googleMapsUrl(slot.activity);
+
   return (
-    <div className="rounded-lg bg-gray-800/50 p-2.5">
-      <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">
+    <div className="rounded-lg bg-paper-3/50 p-2.5 transition-colors hover:bg-paper-3/70">
+      <div className="flex items-center gap-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-ink-2">
         {icon} {label}
       </div>
-      <a href={gmapsHref} target="_blank" rel="noopener noreferrer" className="mt-1 block text-sm font-medium text-blue-400 hover:text-blue-300">
+      <a
+        href={slot.google_maps_link || googleMapsUrl(slot.activity)}
+        target="_blank" rel="noopener noreferrer"
+        className="mt-1 block text-sm font-medium text-accent hover:text-accent-2"
+      >
         {slot.activity} <ExternalLink size={10} className="inline" />
       </a>
-      <div className="mt-0.5 flex gap-3 text-xs text-gray-500">
+      <div className="mt-0.5 flex gap-3 font-mono text-[11px] text-ink-mute">
         {slot.duration && <span>{slot.duration}</span>}
         {slot.cost != null && <span>{costDisplay(slot.cost)}</span>}
       </div>
@@ -65,84 +54,72 @@ function ActivityCell({
   );
 }
 
-function ModeIcon({ mode }: { mode: string }) {
-  const Icon = TRAVEL_MODE_ICONS[mode.toLowerCase()] || Car;
-  return <Icon size={12} />;
-}
-
 function DayCard({ day, origin, destination, totalDays }: { day: DayPlan; origin?: string; destination?: string; totalDays?: number }) {
   let dateDisplay = day.date;
-  try {
-    dateDisplay = format(parseISO(day.date), "EEE, MMM d");
-  } catch {}
+  try { dateDisplay = format(parseISO(day.date), "EEE, MMM d"); } catch {}
 
-  const hasEnriched = day.budget_detail || (day.travel_costs && day.travel_costs.length > 0) || (day.extra_activities && day.extra_activities.length > 0);
+  const hasEnriched = day.budget_detail || (day.travel_costs?.length ?? 0) > 0 || (day.extra_activities?.length ?? 0) > 0;
 
   return (
-    <div className="rounded-xl border border-gray-700 bg-gray-900 shadow-md">
-      <div className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
+    <div className="card overflow-hidden">
+      <div className="flex items-center justify-between border-b border-rule px-4 py-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-blue-400">Day {day.day}</span>
-            <span className="text-sm text-gray-400">{dateDisplay}</span>
+            <span className="font-display text-lg italic text-accent">Day {day.day}</span>
+            <span className="font-mono text-xs text-ink-mute">{dateDisplay}</span>
           </div>
-          <p className="text-sm font-medium text-gray-200">{day.theme}</p>
+          <p className="text-sm text-ink-2 mt-0.5">{day.theme}</p>
         </div>
-        <div className="flex items-center gap-1.5 rounded-full bg-gray-800 px-3 py-1 text-xs font-semibold text-yellow-400">
-          <Wallet size={14} />
+        <div className="flex items-center gap-1.5 rounded-full bg-paper-3 px-3 py-1 font-mono text-xs font-semibold text-accent">
+          <Wallet size={13} />
           {costDisplay(day.daily_budget)}
         </div>
       </div>
+
       <div className="grid grid-cols-3 gap-2 p-4">
-        <ActivityCell icon={<Sun size={14} />} label="Morning" slot={day.morning} />
-        <ActivityCell icon={<CloudSun size={14} />} label="Afternoon" slot={day.afternoon} />
-        <ActivityCell icon={<Moon size={14} />} label="Evening" slot={day.evening} />
+        <ActivityCell icon={<Sun size={13} />} label="Morning" slot={day.morning} />
+        <ActivityCell icon={<CloudSun size={13} />} label="Afternoon" slot={day.afternoon} />
+        <ActivityCell icon={<Moon size={13} />} label="Evening" slot={day.evening} />
       </div>
 
       {hasEnriched && (
-        <div className="border-t border-gray-800 px-4 py-3 space-y-3">
+        <div className="border-t border-rule px-4 py-3 space-y-3">
           {day.day === 1 && origin && destination && (
             <div className="space-y-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Book Your Travel to {destination}</p>
-              <div className="flex flex-wrap gap-2">
-                <a
-                  href={flightSearchUrl(origin, destination, day.date)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 rounded-lg bg-blue-600/20 border border-blue-700/40 px-2.5 py-1.5 text-xs font-medium text-blue-300 hover:bg-blue-600/30"
-                >
-                  <Plane size={12} /> Flights <ExternalLink size={9} />
+              <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-ink-mute">
+                Book Your Travel to {destination}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                <a href={flightSearchUrl(origin, destination, day.date)} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1 rounded px-2.5 py-1.5 text-[11px] font-medium font-mono uppercase tracking-[0.08em] transition-all"
+                  style={{ background: "oklch(45% 0.15 230 / 0.2)", color: "oklch(70% 0.18 230)", border: "1px solid oklch(45% 0.15 230 / 0.3)" }}>
+                  <Plane size={11} /> Flights <ExternalLink size={8} />
                 </a>
-                <a
-                  href={trainSearchUrl(origin, destination)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 rounded-lg bg-green-600/20 border border-green-700/40 px-2.5 py-1.5 text-xs font-medium text-green-300 hover:bg-green-600/30"
-                >
-                  <Train size={12} /> Trains <ExternalLink size={9} />
+                <a href={trainSearchUrl(origin, destination)} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1 rounded px-2.5 py-1.5 text-[11px] font-medium font-mono uppercase tracking-[0.08em] transition-all"
+                  style={{ background: "oklch(45% 0.15 145 / 0.2)", color: "oklch(65% 0.18 145)", border: "1px solid oklch(45% 0.15 145 / 0.3)" }}>
+                  <Train size={11} /> Trains <ExternalLink size={8} />
                 </a>
-                <a
-                  href={busSearchUrl(origin, destination)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 rounded-lg bg-orange-600/20 border border-orange-700/40 px-2.5 py-1.5 text-xs font-medium text-orange-300 hover:bg-orange-600/30"
-                >
-                  <Bus size={12} /> Buses <ExternalLink size={9} />
+                <a href={busSearchUrl(origin, destination)} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1 rounded px-2.5 py-1.5 text-[11px] font-medium font-mono uppercase tracking-[0.08em] transition-all"
+                  style={{ background: "oklch(45% 0.15 60 / 0.2)", color: "oklch(65% 0.18 60)", border: "1px solid oklch(45% 0.15 60 / 0.3)" }}>
+                  <Bus size={11} /> Buses <ExternalLink size={8} />
                 </a>
               </div>
             </div>
           )}
+
           {day.travel_costs && day.travel_costs.length > 0 && (day.day !== 1 || !origin) && (
             <div className="space-y-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Local Travel</p>
-              <div className="space-y-1">
+              <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-ink-mute">Local Travel</p>
+              <div className="space-y-0.5">
                 {day.travel_costs.map((tc, i) => (
-                  <div key={i} className="flex items-center gap-2 rounded-lg bg-gray-800/40 px-2.5 py-1.5 text-xs text-gray-300">
+                  <div key={i} className="flex items-center gap-2 rounded bg-paper-3/40 px-2.5 py-1.5 text-xs text-ink-2">
                     <ModeIcon mode={tc.mode} />
-                    <span className="text-gray-500">{tc.from}</span>
-                    <span className="text-gray-600">→</span>
-                    <span className="text-gray-500">{tc.to}</span>
-                    <span className="ml-auto font-medium text-green-400">{costDisplay(tc.cost_inr)}</span>
+                    <span className="text-ink-mute">{tc.from}</span>
+                    <span className="text-ink-mute/50">→</span>
+                    <span className="text-ink-mute">{tc.to}</span>
+                    <span className="ml-auto font-medium" style={{ color: "var(--color-status-go)" }}>{costDisplay(tc.cost_inr)}</span>
                   </div>
                 ))}
               </div>
@@ -151,11 +128,11 @@ function DayCard({ day, origin, destination, totalDays }: { day: DayPlan; origin
 
           {day.extra_activities && day.extra_activities.length > 0 && (
             <div className="space-y-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Extra Activities Nearby</p>
-              <div className="flex flex-wrap gap-1.5">
+              <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-ink-mute">Extra Activities Nearby</p>
+              <div className="flex flex-wrap gap-1">
                 {day.extra_activities.map((act, i) => (
-                  <span key={i} className="flex items-center gap-1 rounded-full bg-blue-900/30 px-2.5 py-1 text-xs text-blue-300">
-                    <Sparkles size={10} />
+                  <span key={i} className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs text-ink-2 border border-rule">
+                    <Sparkles size={10} className="text-accent" />
                     {act}
                   </span>
                 ))}
@@ -165,44 +142,38 @@ function DayCard({ day, origin, destination, totalDays }: { day: DayPlan; origin
 
           {day.budget_detail && (
             <div className="space-y-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Budget Breakdown</p>
+              <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-ink-mute">Budget Breakdown</p>
               <div className="grid grid-cols-5 gap-1">
                 {Object.entries(day.budget_detail).map(([key, val]) => (
-                  <div key={key} className="rounded bg-gray-800/40 px-2 py-1.5 text-center">
-                    <p className="text-[10px] capitalize text-gray-500">{key}</p>
-                    <p className="text-xs font-medium text-yellow-400">{costDisplay(val)}</p>
+                  <div key={key} className="rounded bg-paper-3/40 px-2 py-1.5 text-center">
+                    <p className="font-mono text-[9px] uppercase text-ink-mute">{key}</p>
+                    <p className="text-xs font-medium text-accent">{costDisplay(val)}</p>
                   </div>
                 ))}
               </div>
             </div>
           )}
+
           {day.day === totalDays && origin && destination && (
             <div className="space-y-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Return Travel to {origin}</p>
-              <div className="flex flex-wrap gap-2">
-                <a
-                  href={flightSearchUrl(destination, origin, day.date)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 rounded-lg bg-blue-600/20 border border-blue-700/40 px-2.5 py-1.5 text-xs font-medium text-blue-300 hover:bg-blue-600/30"
-                >
-                  <Plane size={12} /> Flights <ExternalLink size={9} />
+              <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-ink-mute">
+                Return Travel to {origin}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                <a href={flightSearchUrl(destination, origin, day.date)} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1 rounded px-2.5 py-1.5 text-[11px] font-medium font-mono uppercase tracking-[0.08em] transition-all"
+                  style={{ background: "oklch(45% 0.15 230 / 0.2)", color: "oklch(70% 0.18 230)", border: "1px solid oklch(45% 0.15 230 / 0.3)" }}>
+                  <Plane size={11} /> Flights <ExternalLink size={8} />
                 </a>
-                <a
-                  href={trainSearchUrl(destination, origin)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 rounded-lg bg-green-600/20 border border-green-700/40 px-2.5 py-1.5 text-xs font-medium text-green-300 hover:bg-green-600/30"
-                >
-                  <Train size={12} /> Trains <ExternalLink size={9} />
+                <a href={trainSearchUrl(destination, origin)} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1 rounded px-2.5 py-1.5 text-[11px] font-medium font-mono uppercase tracking-[0.08em] transition-all"
+                  style={{ background: "oklch(45% 0.15 145 / 0.2)", color: "oklch(65% 0.18 145)", border: "1px solid oklch(45% 0.15 145 / 0.3)" }}>
+                  <Train size={11} /> Trains <ExternalLink size={8} />
                 </a>
-                <a
-                  href={busSearchUrl(destination, origin)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 rounded-lg bg-orange-600/20 border border-orange-700/40 px-2.5 py-1.5 text-xs font-medium text-orange-300 hover:bg-orange-600/30"
-                >
-                  <Bus size={12} /> Buses <ExternalLink size={9} />
+                <a href={busSearchUrl(destination, origin)} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1 rounded px-2.5 py-1.5 text-[11px] font-medium font-mono uppercase tracking-[0.08em] transition-all"
+                  style={{ background: "oklch(45% 0.15 60 / 0.2)", color: "oklch(65% 0.18 60)", border: "1px solid oklch(45% 0.15 60 / 0.3)" }}>
+                  <Bus size={11} /> Buses <ExternalLink size={8} />
                 </a>
               </div>
             </div>
@@ -211,30 +182,27 @@ function DayCard({ day, origin, destination, totalDays }: { day: DayPlan; origin
       )}
 
       {(day.accommodation?.name || day.accommodation?.cost_per_night != null) && (
-        <div className="flex items-center gap-2 border-t border-gray-800 px-4 py-2.5 text-xs text-gray-400">
-          <Hotel size={14} />
+        <div className="flex items-center gap-2 border-t border-rule px-4 py-2.5 text-xs text-ink-2">
+          <Hotel size={13} className="text-ink-mute" />
           <span>
             <a
               href={day.accommodation.google_maps_link || googleMapsUrl(day.accommodation.name || "")}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-blue-400"
+              target="_blank" rel="noopener noreferrer"
+              className="hover:text-accent"
             >
-              <strong className="text-gray-300">{day.accommodation.name || "—"}</strong>
+              <strong className="text-ink">{day.accommodation.name || "—"}</strong>
             </a>
-            {day.accommodation.cost_per_night != null &&
-              ` · ${costDisplay(day.accommodation.cost_per_night)}/night`}
+            {day.accommodation.cost_per_night != null && (
+              <span className="text-ink-mute"> · {costDisplay(day.accommodation.cost_per_night)}/night</span>
+            )}
             <a
               href={bookingUrl(destination || "", {
-                city: destination,
-                checkin: day.date,
-                priceMin: day.accommodation.cost_per_night,
+                city: destination, checkin: day.date, priceMin: day.accommodation.cost_per_night,
               })}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ml-2 inline-flex items-center gap-0.5 text-blue-400 hover:text-blue-300"
+              target="_blank" rel="noopener noreferrer"
+              className="ml-2 inline-flex items-center gap-0.5 text-accent hover:text-accent-2"
             >
-              Book <ExternalLink size={10} />
+              Book <ExternalLink size={9} />
             </a>
           </span>
         </div>
@@ -257,43 +225,45 @@ export default function ItineraryTimeline({ itinerary, compact, origin, destinat
   return (
     <div className={`space-y-4 ${compact ? "max-h-[70vh] overflow-y-auto pr-1" : ""}`}>
       {itinerary?.trip_summary && (
-        <p className="text-sm italic text-gray-400">{itinerary.trip_summary}</p>
+        <p className="text-sm italic text-ink-2 leading-relaxed">{itinerary.trip_summary}</p>
       )}
       {destination && (
-        <div className="rounded-xl border border-gray-700 bg-gray-900 p-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500 mb-2">Book Your Trip</p>
-          <div className="flex flex-wrap gap-2">
+        <div className="card p-3">
+          <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-ink-mute mb-2">
+            <span className="text-accent">✦</span> Book Your Trip
+          </p>
+          <div className="flex flex-wrap gap-1.5">
             <a
               href={bookingUrl(destination, { city: destination })}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 rounded-lg bg-blue-600/20 border border-blue-700/40 px-2.5 py-1.5 text-xs font-medium text-blue-300 hover:bg-blue-600/30"
+              target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1 rounded px-2.5 py-1.5 text-[11px] font-medium font-mono uppercase tracking-[0.08em] transition-all"
+              style={{ background: "oklch(45% 0.15 230 / 0.2)", color: "oklch(70% 0.18 230)", border: "1px solid oklch(45% 0.15 230 / 0.3)" }}
             >
-              <Building2 size={12} /> Hotels in {destination} <ExternalLink size={9} />
+              <Hotel size={11} /> Hotels in {destination} <ExternalLink size={8} />
             </a>
             <a
               href={flightSearchUrl(origin || destination, destination)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 rounded-lg bg-indigo-600/20 border border-indigo-700/40 px-2.5 py-1.5 text-xs font-medium text-indigo-300 hover:bg-indigo-600/30"
+              target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1 rounded px-2.5 py-1.5 text-[11px] font-medium font-mono uppercase tracking-[0.08em] transition-all"
+              style={{ background: "oklch(45% 0.15 230 / 0.2)", color: "oklch(70% 0.18 230)", border: "1px solid oklch(45% 0.15 230 / 0.3)" }}
             >
-              <Plane size={12} /> Flights{origin ? ` from ${origin}` : ""} <ExternalLink size={9} />
+              <Plane size={11} /> Flights{origin ? ` from ${origin}` : ""} <ExternalLink size={8} />
             </a>
             <a
               href={trainSearchUrl(origin || destination, destination)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 rounded-lg bg-green-600/20 border border-green-700/40 px-2.5 py-1.5 text-xs font-medium text-green-300 hover:bg-green-600/30"
+              target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1 rounded px-2.5 py-1.5 text-[11px] font-medium font-mono uppercase tracking-[0.08em] transition-all"
+              style={{ background: "oklch(45% 0.15 145 / 0.2)", color: "oklch(65% 0.18 145)", border: "1px solid oklch(45% 0.15 145 / 0.3)" }}
             >
-              <Train size={12} /> Trains{origin ? ` from ${origin}` : ""} <ExternalLink size={9} />
+              <Train size={11} /> Trains{origin ? ` from ${origin}` : ""} <ExternalLink size={8} />
             </a>
             <a
               href={busSearchUrl(origin || destination, destination)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 rounded-lg bg-orange-600/20 border border-orange-700/40 px-2.5 py-1.5 text-xs font-medium text-orange-300 hover:bg-orange-600/30"
+              target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1 rounded px-2.5 py-1.5 text-[11px] font-medium font-mono uppercase tracking-[0.08em] transition-all"
+              style={{ background: "oklch(45% 0.15 60 / 0.2)", color: "oklch(65% 0.18 60)", border: "1px solid oklch(45% 0.15 60 / 0.3)" }}
             >
-              <Bus size={12} /> Buses{origin ? ` from ${origin}` : ""} <ExternalLink size={9} />
+              <Bus size={11} /> Buses{origin ? ` from ${origin}` : ""} <ExternalLink size={8} />
             </a>
           </div>
         </div>
@@ -304,8 +274,9 @@ export default function ItineraryTimeline({ itinerary, compact, origin, destinat
         ))}
       </div>
       {itinerary?.important_notes && (
-        <div className="rounded-xl border border-yellow-800/40 bg-yellow-900/20 px-4 py-3 text-sm text-yellow-200">
-          {itinerary.important_notes}
+        <div className="card p-4 text-sm border-l-2" style={{ borderLeftColor: "var(--color-accent)" }}>
+          <p className="font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-ink-mute mb-1">Notes</p>
+          <p className="text-ink-2 leading-relaxed">{itinerary.important_notes}</p>
         </div>
       )}
     </div>

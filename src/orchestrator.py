@@ -196,8 +196,11 @@ async def plan_itinerary(state: PlannerState) -> dict[str, Any]:
             "workflow_stage": "planning_failed",
         }
 
+    pricing_data = output.pop("pricing_data", {})
+
     result = {
         "draft_itinerary": output,
+        "pricing_data": pricing_data,
         "workflow_stage": "awaiting_review",
         "hitl_status": "pending",
         "error": None,

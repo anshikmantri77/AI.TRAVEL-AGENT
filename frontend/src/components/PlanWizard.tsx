@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import {
@@ -17,6 +17,7 @@ import {
   Sunset,
   Heart,
   PartyPopper,
+  Compass,
 } from "lucide-react";
 import { createPlan, TravelRequest, TRIP_PURPOSES, INTEREST_OPTIONS } from "../lib/api";
 
@@ -56,10 +57,20 @@ const PURPOSE_ICONS: Record<string, typeof Mountain> = {
   bachelor_party: PartyPopper,
 };
 
+const STEPS = ["Purpose", "Destination", "Budget", "Style"];
+const STEP_DESC = [
+  "What kind of journey?",
+  "Where & when?",
+  "How much?",
+  "Who are you?",
+];
+
 export default function PlanWizard() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [direction, setDirection] = useState<"forward" | "back">("forward");
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const [purpose, setPurpose] = useState<string | null>(null);
   const [origin, setOrigin] = useState("");
@@ -80,6 +91,12 @@ export default function PlanWizard() {
       navigate(`/plan/${data.session_id}/review`);
     },
   });
+
+  useEffect(() => {
+    if (panelRef.current && typeof panelRef.current.scrollTo === "function") {
+      panelRef.current.scrollTo(0, 0);
+    }
+  }, [step]);
 
   const toggleInterest = (tag: string) => {
     setInterests((prev) =>
@@ -115,10 +132,16 @@ export default function PlanWizard() {
   };
 
   const nextStep = () => {
-    if (validateStep(step)) setStep(step + 1);
+    if (validateStep(step)) {
+      setDirection("forward");
+      setStep(step + 1);
+    }
   };
 
-  const prevStep = () => setStep(step - 1);
+  const prevStep = () => {
+    setDirection("back");
+    setStep(step - 1);
+  };
 
   const handleSubmit = () => {
     if (!validateStep(step)) return;
@@ -136,248 +159,232 @@ export default function PlanWizard() {
     });
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
-  const labelClass = "mb-1 block text-xs font-medium uppercase tracking-wider text-gray-400";
-  const errorClass = "mt-1 text-xs text-red-400";
+  return (
+    <div className="mx-auto max-w-2xl">
+      <StepIndicator step={step} direction={direction} />
 
-  if (step === 1) {
-    return (
-      <div className="mx-auto max-w-xl space-y-6">
-        <StepIndicator step={1} />
-        <p className="text-sm text-gray-400">
-          What kind of trip are you planning?
-        </p>
-        <div className="grid grid-cols-2 gap-3">
-          {TRIP_PURPOSES.map((p) => {
-            const selected = purpose === p.id;
-            const Icon = PURPOSE_ICONS[p.id] || Mountain;
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setPurpose(selected ? null : p.id)}
-                className={`rounded-xl border p-4 text-left transition-colors ${
-                  selected
-                    ? "border-blue-500 bg-blue-900/30 ring-1 ring-blue-500"
-                    : "border-gray-700 bg-gray-800/50 hover:border-gray-500"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Icon size={18} className={selected ? "text-blue-400" : "text-gray-400"} />
-                  <span className="text-sm font-semibold">{p.label}</span>
-                </div>
-                <p className="mt-1 text-xs text-gray-400">{p.desc}</p>
-              </button>
-            );
-          })}
-        </div>
-        {errors.purpose && <p className="text-xs text-red-400">{errors.purpose}</p>}
-        <div className="flex justify-end">
-          <button onClick={nextStep} className="btn-primary">
-            Next <ArrowRight size={16} />
-          </button>
-        </div>
-      </div>
-    );
-  }
+      <div
+        ref={panelRef}
+        className="mt-8 space-y-8 min-h-[360px]"
+      >
+        <header>
+          <p className="section-label text-xs">{STEPS[step - 1]}</p>
+          <h2 className="mt-2 font-display text-3xl italic text-ink">
+            {STEP_DESC[step - 1]}
+          </h2>
+        </header>
 
-  if (step === 2) {
-    return (
-      <div className="mx-auto max-w-xl space-y-6">
-        <StepIndicator step={2} />
-        <div className="space-y-4">
-          <div>
-            <label className={labelClass}>Destination *</label>
-            <div className="relative">
-              <MapPin size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-              <input
-                className={`${inputClass} pl-9`}
-                placeholder="e.g. Paris, France"
-                value={dest}
-                onChange={(e) => setDest(e.target.value)}
-              />
-            </div>
-            {errors.destination && <p className={errorClass}>{errors.destination}</p>}
-          </div>
-          <div>
-            <label className={labelClass}>Departure City (Origin) *</label>
-            <div className="relative">
-              <MapPin size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-              <input
-                className={`${inputClass} pl-9`}
-                placeholder="e.g. Mumbai"
-                value={origin}
-                onChange={(e) => setOrigin(e.target.value)}
-              />
-            </div>
-            {errors.origin && <p className={errorClass}>{errors.origin}</p>}
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelClass}>Start Date</label>
-              <div className="relative">
-                <Calendar size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input
-                  type="date"
-                  className={`${inputClass} pl-9`}
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-              </div>
-              {errors.start_date && <p className={errorClass}>{errors.start_date}</p>}
-            </div>
-            <div>
-              <label className={labelClass}>End Date</label>
-              <div className="relative">
-                <Calendar size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input
-                  type="date"
-                  className={`${inputClass} pl-9`}
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
-              </div>
-              {errors.end_date && <p className={errorClass}>{errors.end_date}</p>}
-            </div>
-          </div>
-        </div>
-        <div className="flex justify-between">
-          <button onClick={prevStep} className="btn-ghost">
-            <ArrowLeft size={16} /> Back
-          </button>
-          <button onClick={nextStep} className="btn-primary">
-            Next <ArrowRight size={16} />
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (step === 3) {
-    return (
-      <div className="mx-auto max-w-xl space-y-6">
-        <StepIndicator step={3} />
-        <div className="space-y-4">
-          <div>
-            <label className={labelClass}>Budget Min (₹)</label>
-            <input
-              type="number"
-              min={0}
-              className={inputClass}
-              value={budgetMin}
-              onChange={(e) => setBudgetMin(e.target.value)}
-            />
-            {errors.budget_min && <p className={errorClass}>{errors.budget_min}</p>}
-          </div>
-          <div>
-            <label className={labelClass}>Budget Max (₹)</label>
-            <input
-              type="number"
-              min={0}
-              className={inputClass}
-              value={budgetMax}
-              onChange={(e) => setBudgetMax(e.target.value)}
-            />
-            {errors.budget_max && <p className={errorClass}>{errors.budget_max}</p>}
-          </div>
-          <div>
-            <label className={labelClass}>Number of Travelers</label>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700 disabled:opacity-40"
-                disabled={numTravelers <= 1}
-                onClick={() => setNumTravelers(Math.max(1, numTravelers - 1))}
-              >
-                −
-              </button>
-              <span className="w-8 text-center text-lg font-semibold">{numTravelers}</span>
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700 disabled:opacity-40"
-                disabled={numTravelers >= 20}
-                onClick={() => setNumTravelers(Math.min(20, numTravelers + 1))}
-              >
-                +
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className={labelClass}>Interests (tap to select, 1–10)</label>
-            <div className="flex flex-wrap gap-1.5 border border-gray-700 rounded-lg bg-gray-800/30 p-3 max-h-48 overflow-y-auto">
-              {INTEREST_OPTIONS.map((opt) => {
-                const selected = interests.includes(opt);
+        {step === 1 && (
+          <div className="space-y-4" key="step1">
+            <div className="grid grid-cols-2 gap-3">
+              {TRIP_PURPOSES.map((p) => {
+                const selected = purpose === p.id;
+                const Icon = PURPOSE_ICONS[p.id] || Mountain;
                 return (
                   <button
-                    key={opt}
+                    key={p.id}
                     type="button"
-                    onClick={() => toggleInterest(opt)}
-                    disabled={!selected && interests.length >= 10}
-                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    onClick={() => setPurpose(selected ? null : p.id)}
+                    className={`card p-4 text-left transition-all ${
                       selected
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                    } disabled:opacity-30`}
+                        ? "border-accent ring-1 ring-accent"
+                        : "hover:border-ink-mute"
+                    }`}
                   >
-                    {opt}
+                    <div className="flex items-center gap-2">
+                      <Icon size={18} className={selected ? "text-accent" : "text-ink-mute"} />
+                      <span className="text-sm font-semibold">{p.label}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-ink-mute">{p.desc}</p>
                   </button>
                 );
               })}
             </div>
-            <p className="mt-1 text-xs text-gray-500">
-              {interests.length}/10 selected
-            </p>
-            {errors.interests && <p className={errorClass}>{errors.interests}</p>}
+            {errors.purpose && (
+              <p className="text-xs" style={{ color: "var(--color-status-stop)" }}>{errors.purpose}</p>
+            )}
           </div>
-        </div>
-        <div className="flex justify-between">
-          <button onClick={prevStep} className="btn-ghost">
-            <ArrowLeft size={16} /> Back
-          </button>
-          <button onClick={nextStep} className="btn-primary">
-            Next <ArrowRight size={16} />
-          </button>
-        </div>
-      </div>
-    );
-  }
+        )}
 
-  if (step === 4) {
-    return (
-      <div className="mx-auto max-w-xl space-y-6">
-        <StepIndicator step={4} />
-        <p className="text-sm text-gray-400">
-          Pick a travel style (optional — default will be used if none selected)
-        </p>
-        <div className="grid grid-cols-2 gap-3">
-          {PERSONAS.map((p) => {
-            const selected = persona === p.id;
-            const Icon = p.icon;
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setPersona(selected ? null : p.id)}
-                className={`rounded-xl border p-4 text-left transition-colors ${
-                  selected
-                    ? "border-blue-500 bg-blue-900/30 ring-1 ring-blue-500"
-                    : "border-gray-700 bg-gray-800/50 hover:border-gray-500"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Icon size={20} className={selected ? "text-blue-400" : "text-gray-400"} />
-                  <span className="font-semibold text-sm">{p.label}</span>
+        {step === 2 && (
+          <div className="space-y-5" key="step2">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1.5 block font-mono text-xs uppercase tracking-[0.14em] text-ink-mute">Destination *</label>
+                <div className="relative">
+                  <MapPin size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-mute" />
+                  <input
+                    className="input-field pl-9"
+                    placeholder="e.g. Jaipur"
+                    value={dest}
+                    onChange={(e) => setDest(e.target.value)}
+                  />
                 </div>
-                <p className="mt-1 text-xs text-gray-400">{p.desc}</p>
-              </button>
-            );
-          })}
-        </div>
-        <div className="flex justify-between">
+                {errors.destination && <p className="mt-1 text-xs" style={{ color: "var(--color-status-stop)" }}>{errors.destination}</p>}
+              </div>
+              <div>
+                <label className="mb-1.5 block font-mono text-xs uppercase tracking-[0.14em] text-ink-mute">Departing from *</label>
+                <div className="relative">
+                  <MapPin size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-mute" />
+                  <input
+                    className="input-field pl-9"
+                    placeholder="e.g. Mumbai"
+                    value={origin}
+                    onChange={(e) => setOrigin(e.target.value)}
+                  />
+                </div>
+                {errors.origin && <p className="mt-1 text-xs" style={{ color: "var(--color-status-stop)" }}>{errors.origin}</p>}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1.5 block font-mono text-xs uppercase tracking-[0.14em] text-ink-mute">Start Date *</label>
+                <div className="relative">
+                  <Calendar size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-mute" />
+                  <input
+                    type="date"
+                    className="input-field pl-9"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+                {errors.start_date && <p className="mt-1 text-xs" style={{ color: "var(--color-status-stop)" }}>{errors.start_date}</p>}
+              </div>
+              <div>
+                <label className="mb-1.5 block font-mono text-xs uppercase tracking-[0.14em] text-ink-mute">End Date *</label>
+                <div className="relative">
+                  <Calendar size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-mute" />
+                  <input
+                    type="date"
+                    className="input-field pl-9"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
+                {errors.end_date && <p className="mt-1 text-xs" style={{ color: "var(--color-status-stop)" }}>{errors.end_date}</p>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-5" key="step3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1.5 block font-mono text-xs uppercase tracking-[0.14em] text-ink-mute">Budget (Min) ₹</label>
+                <input
+                  type="number"
+                  min={0}
+                  className="input-field"
+                  placeholder="5000"
+                  value={budgetMin}
+                  onChange={(e) => setBudgetMin(e.target.value)}
+                />
+                {errors.budget_min && <p className="mt-1 text-xs" style={{ color: "var(--color-status-stop)" }}>{errors.budget_min}</p>}
+              </div>
+              <div>
+                <label className="mb-1.5 block font-mono text-xs uppercase tracking-[0.14em] text-ink-mute">Budget (Max) ₹</label>
+                <input
+                  type="number"
+                  min={0}
+                  className="input-field"
+                  placeholder="25000"
+                  value={budgetMax}
+                  onChange={(e) => setBudgetMax(e.target.value)}
+                />
+                {errors.budget_max && <p className="mt-1 text-xs" style={{ color: "var(--color-status-stop)" }}>{errors.budget_max}</p>}
+              </div>
+            </div>
+            <div>
+              <label className="mb-1.5 block font-mono text-xs uppercase tracking-[0.14em] text-ink-mute">Travelers</label>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-rule bg-paper-3 text-ink-2 hover:border-ink-mute disabled:opacity-40"
+                  disabled={numTravelers <= 1}
+                  onClick={() => setNumTravelers(Math.max(1, numTravelers - 1))}
+                >−</button>
+                <span className="w-8 text-center text-lg font-semibold font-mono">{numTravelers}</span>
+                <button
+                  type="button"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-rule bg-paper-3 text-ink-2 hover:border-ink-mute disabled:opacity-40"
+                  disabled={numTravelers >= 20}
+                  onClick={() => setNumTravelers(Math.min(20, numTravelers + 1))}
+                >+</button>
+              </div>
+            </div>
+            <div>
+              <label className="mb-1.5 block font-mono text-xs uppercase tracking-[0.14em] text-ink-mute">
+                Interests <span className="text-ink-mute normal-case">— {interests.length}/10 selected</span>
+              </label>
+              <div className="flex flex-wrap gap-1.5 border border-rule rounded-lg bg-paper-3/50 p-3 max-h-48 overflow-y-auto">
+                {INTEREST_OPTIONS.map((opt) => {
+                  const selected = interests.includes(opt);
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => toggleInterest(opt)}
+                      disabled={!selected && interests.length >= 10}
+                      className={`chip ${
+                        selected ? "chip-active" : "chip-inactive"
+                      } disabled:opacity-30`}
+                    >
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+              {errors.interests && <p className="mt-1 text-xs" style={{ color: "var(--color-status-stop)" }}>{errors.interests}</p>}
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="space-y-4" key="step4">
+            <p className="text-sm text-ink-2">Pick a travel style — or skip for a balanced recommendation.</p>
+            <div className="grid grid-cols-2 gap-3">
+              {PERSONAS.map((p) => {
+                const selected = persona === p.id;
+                const Icon = p.icon;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setPersona(selected ? null : p.id)}
+                    className={`card p-4 text-left transition-all ${
+                      selected
+                        ? "border-accent ring-1 ring-accent"
+                        : "hover:border-ink-mute"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Icon size={20} className={selected ? "text-accent" : "text-ink-mute"} />
+                      <span className="font-semibold text-sm">{p.label}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-ink-mute">{p.desc}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-8 flex items-center justify-between border-t border-rule pt-6">
+        {step > 1 ? (
           <button onClick={prevStep} className="btn-ghost">
-            <ArrowLeft size={16} /> Back
+            <ArrowLeft size={15} /> Back
           </button>
+        ) : (
+          <div />
+        )}
+
+        {step < 4 ? (
+          <button onClick={nextStep} className="btn-primary">
+            Next <ArrowRight size={15} />
+          </button>
+        ) : (
           <button
             onClick={handleSubmit}
             disabled={mutation.isPending}
@@ -385,75 +392,59 @@ export default function PlanWizard() {
           >
             {mutation.isPending ? (
               <span className="flex items-center gap-2">
-                <Spinner /> Planning...
+                <Compass size={15} className="animate-spin" /> Planning...
               </span>
             ) : (
               <span className="flex items-center gap-2">
-                <Send size={16} /> Plan My Trip
+                <Send size={15} /> Plan My Trip
               </span>
             )}
           </button>
-        </div>
-        {mutation.isError && (
-          <p className="text-sm text-red-400">
-            {mutation.error instanceof Error
-              ? mutation.error.message
-              : "Something went wrong"}
-          </p>
         )}
       </div>
-    );
-  }
 
-  return null;
+      {mutation.isError && (
+        <p className="mt-4 text-sm" style={{ color: "var(--color-status-stop)" }}>
+          {mutation.error instanceof Error
+            ? mutation.error.message
+            : "Something went wrong"}
+        </p>
+      )}
+    </div>
+  );
 }
 
-function StepIndicator({ step }: { step: number }) {
-  const labels = ["Trip Purpose", "Destination & Dates", "Budget & Interests", "Travel Style"];
+function StepIndicator({ step }: { step: number; direction?: "forward" | "back" }) {
   return (
-    <div className="flex items-center gap-2 text-xs">
-      {labels.map((label, i) => {
+    <nav aria-label="Steps" className="flex items-center gap-2 text-xs font-mono">
+      {STEPS.map((label, i) => {
         const idx = i + 1;
         const active = idx === step;
         const done = idx < step;
         return (
           <div key={label} className="flex items-center gap-2">
             <div
-              className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+              className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all ${
                 active
-                  ? "bg-blue-600 text-white"
+                  ? "bg-accent text-paper shadow-[0_0_12px_var(--color-accent)]"
                   : done
-                    ? "bg-green-700 text-white"
-                    : "bg-gray-700 text-gray-400"
+                    ? "text-ink-2 border border-ink-mute"
+                    : "border border-rule text-ink-mute"
               }`}
             >
               {done ? "✓" : idx}
             </div>
-            <span className={active ? "text-gray-200" : "text-gray-500"}>{label}</span>
-            {idx < 4 && <div className="h-px w-6 bg-gray-700" />}
+            <span
+              className={`hidden sm:inline transition-colors ${
+                active ? "text-ink" : "text-ink-mute"
+              }`}
+            >
+              {label}
+            </span>
+            {idx < 4 && <div className="h-px w-5 sm:w-8 bg-rule" />}
           </div>
         );
       })}
-    </div>
-  );
-}
-
-function Spinner() {
-  return (
-    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-      />
-    </svg>
+    </nav>
   );
 }

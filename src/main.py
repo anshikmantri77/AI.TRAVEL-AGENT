@@ -6,25 +6,20 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 from src.api.routes import router
 from src.api.session_store import SessionStore
 from src.api.streaming import streaming_manager
 from src.auth.routes import auth_router
 from src.config import get_settings
+from src.limiter import limiter
 from src.observability.tracing import setup_tracing
 from src.orchestrator import compile_graph
 from src.utils.helpers import setup_logging
 
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# SlowAPI rate limiter — keyed by client IP
-# ---------------------------------------------------------------------------
-limiter = Limiter(key_func=get_remote_address)
 
 
 @asynccontextmanager
@@ -67,8 +62,6 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Cleanup (nothing persistent to tear down with in-memory store)
-
 
 app = FastAPI(
     title="AI Travel Planner",
@@ -87,22 +80,9 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ---------------------------------------------------------------------------
-# Attach rate limit to POST /plan via a route-level decorator helper.
-# SlowAPI requires the limiter decorator on the route function itself; we
-# monkey-patch it onto the route after the router is included so that the
-# existing routes.py file is never modified.
+# Register routers — rate limit is applied via @limiter.limit() decorator
+# directly in routes.py using the shared src.limiter module.
 # ---------------------------------------------------------------------------
 app.include_router(router)
 app.include_router(auth_router)
-
-# Apply rate limit to the /plan endpoint after router registration.
-_settings = get_settings()
-_rate_string = f"{_settings.RATE_LIMIT_PER_MINUTE}/minute"
-
-for route in app.routes:
-    if hasattr(route, "path") and route.path == "/plan" and "POST" in getattr(route, "methods", set()):
-        # Wrap the existing endpoint with the SlowAPI decorator at startup.
-        route.endpoint = limiter.limit(_rate_string)(route.endpoint)
-        logger.debug("Rate limit '%s' applied to POST /plan.", _rate_string)
-        break
 

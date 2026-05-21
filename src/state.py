@@ -65,3 +65,6 @@ class PlannerState(TypedDict, total=False):
 
     # authenticated user (None for anonymous requests)
     user_id: str | None
+
+    # live pricing data from Amadeus / other providers
+    pricing_data: dict[str, Any]
